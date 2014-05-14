@@ -32,8 +32,11 @@ angular.module('ui.dashboard')
         };
       overrides = overrides || {};
       angular.extend(this, angular.copy(defaults), overrides);
-      this.style = this.style || { width: '33%' };
-      this.setWidth(this.style.width);
+      this.style = this.style;
+
+      if (this.style && this.style.width) {
+        this.setWidth(this.style.width);
+      }
 
       if (Class.templateUrl) {
         this.templateUrl = Class.templateUrl;
