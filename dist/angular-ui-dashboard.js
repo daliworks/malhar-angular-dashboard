@@ -36,23 +36,7 @@ angular.module('ui.dashboard')
         
       },
       link: function (scope, element, attrs) {
-        // Extract options the dashboard="" attribute
-        scope.options = scope.$eval(attrs.dashboard);
-
-        // Save default widget config for reset
-        scope.defaultWidgets = scope.options.defaultWidgets;
-        
-        //scope.widgetDefs = scope.options.widgetDefinitions;
-        scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
         var count = 1;
-
-        // Instantiate new instance of dashboard state
-        scope.dashboardState = new DashboardState(
-          scope.options.storage,
-          scope.options.storageId,
-          scope.options.storageHash,
-          scope.widgetDefs
-        );
 
         /**
          * Instantiates a new widget on the dashboard
@@ -176,8 +160,24 @@ angular.module('ui.dashboard')
           scope.loadWidgets(scope.defaultWidgets);
         };
 
-        // Set default widgets array
-        var savedWidgetDefs = scope.dashboardState.load();
+        function setupDashboard(dashboardOptions) {
+          // Extract options the dashboard="" attribute
+          scope.options = dashboardOptions;
+
+          // Save default widget config for reset
+          scope.defaultWidgets = scope.options.defaultWidgets;
+          
+          //scope.widgetDefs = scope.options.widgetDefinitions;
+          scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
+
+          // Instantiate new instance of dashboard state
+          scope.dashboardState = new DashboardState(
+            scope.options.storage,
+            scope.options.storageId,
+            scope.options.storageHash,
+            scope.widgetDefs
+          );
+        }
 
         // Success handler
         function handleStateLoad(saved) {
@@ -188,20 +188,31 @@ angular.module('ui.dashboard')
           }
         }
 
-        if (savedWidgetDefs instanceof Array) {
-          handleStateLoad(savedWidgetDefs);
-        }
-        else if (savedWidgetDefs && typeof savedWidgetDefs === 'object' && typeof savedWidgetDefs.then === 'function') {
-          savedWidgetDefs.then(handleStateLoad, handleStateLoad);
-        }
-        else {
-          handleStateLoad();
-        }
+        scope.$parent.$watch(attrs.options, function (dashboardOptions) {
+          if (dashboardOptions) {
+            setupDashboard(dashboardOptions);
 
-        // allow adding widgets externally
-        scope.options.addWidget = scope.addWidget;
-        scope.options.loadWidgets = scope.loadWidgets;
-        scope.options.saveDashboard = scope.saveDashboard;
+            // Set default widgets array
+            var savedWidgetDefs = scope.dashboardState.load();
+
+            if (savedWidgetDefs instanceof Array) {
+              handleStateLoad(savedWidgetDefs);
+            }
+            else if (savedWidgetDefs && typeof savedWidgetDefs === 'object' && typeof savedWidgetDefs.then === 'function') {
+              savedWidgetDefs.then(handleStateLoad, handleStateLoad);
+            }
+            else {
+              handleStateLoad();
+            }
+
+            // allow adding widgets externally
+            scope.options.addWidget = scope.addWidget;
+            scope.options.loadWidgets = scope.loadWidgets;
+            scope.options.saveDashboard = scope.saveDashboard;
+          } else {
+            console.log('dashboardOptions is not ready');
+          }
+        });
 
         // save state
         scope.$on('widgetChanged', function (event) {

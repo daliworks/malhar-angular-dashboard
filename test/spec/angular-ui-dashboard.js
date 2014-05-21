@@ -49,7 +49,7 @@ describe('Directive: dashboard', function () {
     };
     $rootScope.value = 10;
 
-    element = $compile('<div dashboard="dashboardOptions"></div>')($rootScope);
+    element = $compile('<div dashboard options="dashboardOptions"></div>')($rootScope);
     $compile(element)($rootScope);
     $rootScope.$digest();
   }));
