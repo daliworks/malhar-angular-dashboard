@@ -247,7 +247,7 @@ angular.module('ui.dashboard')
 
         scope.getWidgets = function() {
           return scope.widgets;
-        }
+        };
 
         scope.$parent.$watch(attrs.options, function (dashboardOptions) {
           if (dashboardOptions) {
