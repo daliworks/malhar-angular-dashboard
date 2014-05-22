@@ -21,6 +21,7 @@ angular.module('ui.dashboard')
     // constructor for widget model instances
     function WidgetModel(Class, overrides) {
       var defaults = {
+          id: Class.id,
           title: 'Widget',
           name: Class.name,
           attrs: Class.attrs,

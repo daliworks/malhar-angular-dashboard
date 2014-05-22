@@ -82,6 +82,7 @@ angular.module('ui.dashboard')
         scope.removeWidget = function (widget) {
           scope.widgets.splice(_.indexOf(scope.widgets, widget), 1);
           scope.saveDashboard();
+          scope.$emit('widgetRemoved', widget);
         };
 
         /**
@@ -244,6 +245,10 @@ angular.module('ui.dashboard')
           }
         };
 
+        scope.getWidgets = function() {
+          return scope.widgets;
+        }
+
         scope.$parent.$watch(attrs.options, function (dashboardOptions) {
           if (dashboardOptions) {
             setupDashboard(dashboardOptions);
@@ -256,6 +261,8 @@ angular.module('ui.dashboard')
             scope.options.loadWidgets = scope.loadWidgets;
             scope.options.saveDashboard = scope.externalSaveDashboard;
             scope.options.loadDashboard = scope.loadSavedWidgets;
+            scope.options.getWidgets = scope.getWidgets;
+            scope.options.clearWidgets = scope.clear;
           } else {
             console.log('dashboardOptions is not ready');
           }
