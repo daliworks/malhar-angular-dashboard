@@ -6,7 +6,6 @@
 .widget-container {
     float:left;
     display: inline-block;
-    width: 33%;
 }
 
 .widget {

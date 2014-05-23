@@ -31,36 +31,14 @@ angular.module('ui.dashboard')
           },
           handle: '.widget-header'
         };
-        
+
       }],
       link: function (scope, element, attrs) {
-
         // default options
         var defaults = {
           stringifyStorage: true
         };
-
-        scope.options = scope.$eval(attrs.dashboard);
-
-        // from dashboard="options"
-        angular.extend(defaults, scope.options);
-        angular.extend(scope.options, defaults);
-
-        // Save default widget config for reset
-        scope.defaultWidgets = scope.options.defaultWidgets;
-        
-        //scope.widgetDefs = scope.options.widgetDefinitions;
-        scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
         var count = 1;
-
-        // Instantiate new instance of dashboard state
-        scope.dashboardState = new DashboardState(
-          scope.options.storage,
-          scope.options.storageId,
-          scope.options.storageHash,
-          scope.widgetDefs,
-          scope.options.stringifyStorage
-        );
 
         /**
          * Instantiates a new widget on the dashboard
@@ -103,6 +81,7 @@ angular.module('ui.dashboard')
         scope.removeWidget = function (widget) {
           scope.widgets.splice(_.indexOf(scope.widgets, widget), 1);
           scope.saveDashboard();
+          scope.$emit('widgetRemoved', widget);
         };
 
         /**
@@ -217,8 +196,29 @@ angular.module('ui.dashboard')
           scope.saveDashboard();
         };
 
-        // Set default widgets array
-        var savedWidgetDefs = scope.dashboardState.load();
+        function setupDashboard(dashboardOptions) {
+          // Extract options the dashboard="" attribute
+          scope.options = dashboardOptions;
+
+          // from dashboard="options"
+          angular.extend(defaults, scope.options);
+          angular.extend(scope.options, defaults);
+
+          // Save default widget config for reset
+          scope.defaultWidgets = scope.options.defaultWidgets;
+          
+          //scope.widgetDefs = scope.options.widgetDefinitions;
+          scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
+
+          // Instantiate new instance of dashboard state
+          scope.dashboardState = new DashboardState(
+            scope.options.storage,
+            scope.options.storageId,
+            scope.options.storageHash,
+            scope.widgetDefs,
+            scope.options.stringifyStorage
+          );
+        }
 
         // Success handler
         function handleStateLoad(saved) {
@@ -231,22 +231,38 @@ angular.module('ui.dashboard')
           }
         }
 
-        if (savedWidgetDefs instanceof Array) {
-          handleStateLoad(savedWidgetDefs);
-        }
-        else if (savedWidgetDefs && typeof savedWidgetDefs === 'object' && typeof savedWidgetDefs.then === 'function') {
-          savedWidgetDefs.then(handleStateLoad, handleStateLoad);
-        }
-        else {
-          handleStateLoad();
-        }
+        scope.getWidgets = function() {
+          return scope.widgets;
+        };
 
-        // expose functionality externally
-        // functions are appended to the provided dashboard options
-        scope.options.addWidget = scope.addWidget;
-        scope.options.loadWidgets = scope.loadWidgets;
-        scope.options.saveDashboard = scope.externalSaveDashboard;
+        scope.$parent.$watch(attrs.options, function (dashboardOptions) {
+          if (dashboardOptions) {
+            setupDashboard(dashboardOptions);
 
+            // Set default widgets array
+            var savedWidgetDefs = scope.dashboardState.load();
+
+            if (savedWidgetDefs instanceof Array) {
+              handleStateLoad(savedWidgetDefs);
+            }
+            else if (savedWidgetDefs && typeof savedWidgetDefs === 'object' && typeof savedWidgetDefs.then === 'function') {
+              savedWidgetDefs.then(handleStateLoad, handleStateLoad);
+            }
+            else {
+              handleStateLoad();
+            }
+
+            // expose functionality externally
+            // functions are appended to the provided dashboard options
+            scope.options.addWidget = scope.addWidget;
+            scope.options.loadWidgets = scope.loadWidgets;
+            scope.options.saveDashboard = scope.externalSaveDashboard;
+            scope.options.getWidgets = scope.getWidgets;
+            scope.options.clearWidgets = scope.clear;
+          } else {
+            console.log('dashboardOptions is not ready');
+          }
+        });
 
         // save state
         scope.$on('widgetChanged', function (event) {
@@ -598,6 +614,7 @@ angular.module('ui.dashboard')
     // constructor for widget model instances
     function WidgetModel(Class, overrides) {
       var defaults = {
+          id: Class.id,
           title: 'Widget',
           name: Class.name,
           attrs: Class.attrs,
@@ -609,8 +626,11 @@ angular.module('ui.dashboard')
         };
       overrides = overrides || {};
       angular.extend(this, angular.copy(defaults), overrides);
-      this.style = this.style || { width: '33%' };
-      this.setWidth(this.style.width);
+      this.style = this.style;
+
+      if (this.style && this.style.width) {
+        this.setWidth(this.style.width);
+      }
 
       if (Class.templateUrl) {
         this.templateUrl = Class.templateUrl;
@@ -927,7 +947,7 @@ angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
     "    </div>\n" +
     "\n" +
     "    <div ui-sortable=\"sortableOptions\" ng-model=\"widgets\" class=\"dashboard-widget-area\">\n" +
-    "        <div ng-repeat=\"widget in widgets\" ng-style=\"widget.style\" class=\"widget-container\" widget>\n" +
+    "        <div ng-repeat=\"widget in widgets\" ng-style=\"widget.style\" class=\"widget-container col-xs-12 col-sm-6 col-md-4\" widget>\n" +
     "            <div class=\"widget panel panel-default\">\n" +
     "                <div class=\"widget-header panel-heading\">\n" +
     "                    <h3 class=\"panel-title\">\n" +
