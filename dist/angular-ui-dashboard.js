@@ -100,7 +100,7 @@ angular.module('ui.dashboard')
                   return widget;
                 },
                 optionsTemplateUrl: function () {
-                  return scope.options.optionsTemplateUrl;
+                  return widget.optionsTemplateUrl || scope.options.optionsTemplateUrl;
                 }
               },
               controller: 'WidgetDialogCtrl'
@@ -113,7 +113,9 @@ angular.module('ui.dashboard')
             function (result) {
               console.log('widget dialog closed');
               console.log('result: ', result);
-              widget.title = result.title;
+              //widget.title = result.title;
+              widget.options = widget.options || {};
+              angular.extend(widget.options, result);
               //AW Persist title change from options editor
               scope.$emit('widgetChanged', widget);
             },
@@ -206,7 +208,7 @@ angular.module('ui.dashboard')
 
           // Save default widget config for reset
           scope.defaultWidgets = scope.options.defaultWidgets;
-          
+
           //scope.widgetDefs = scope.options.widgetDefinitions;
           scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
 
@@ -265,8 +267,8 @@ angular.module('ui.dashboard')
         });
 
         // save state
-        scope.$on('widgetChanged', function (event) {
-          event.stopPropagation();
+        scope.$on('widgetChanged', function (/*event*/) {
+          //event.stopPropagation();
           scope.saveDashboard();
         });
       }
@@ -622,6 +624,8 @@ angular.module('ui.dashboard')
           dataModelType: Class.dataModelType,
           //AW Need deep copy of options to support widget options editing
           dataModelOptions: Class.dataModelOptions,
+          optionsTemplateUrl: Class.optionsTemplateUrl,
+          options: Class.options,
           style: Class.style
         };
       overrides = overrides || {};
@@ -665,6 +669,7 @@ angular.module('ui.dashboard')
 
     return WidgetModel;
   });
+
 /*
  * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
  *
@@ -857,6 +862,8 @@ angular.module('ui.dashboard')
       title: widget.title
     };
 
+    angular.extend($scope.result, widget.options || {});
+
     // look for optionsTemplateUrl on widget
     $scope.optionsTemplateUrl = optionsTemplateUrl || 'template/widget-default-content.html';
 
@@ -868,6 +875,7 @@ angular.module('ui.dashboard')
       $modalInstance.dismiss('cancel');
     };
   }]);
+
 angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
 
   $templateCache.put("template/alt-dashboard.html",

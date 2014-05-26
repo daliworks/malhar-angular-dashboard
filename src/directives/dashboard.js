@@ -267,7 +267,7 @@ angular.module('ui.dashboard')
         });
 
         // save state
-        scope.$on('widgetChanged', function (event) {
+        scope.$on('widgetChanged', function (/*event*/) {
           //event.stopPropagation();
           scope.saveDashboard();
         });
