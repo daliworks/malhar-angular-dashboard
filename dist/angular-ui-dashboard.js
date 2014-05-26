@@ -113,7 +113,7 @@ angular.module('ui.dashboard')
             function (result) {
               console.log('widget dialog closed');
               console.log('result: ', result);
-              //widget.title = result.title;
+              widget.title = result.title;
               widget.options = widget.options || {};
               angular.extend(widget.options, result);
               //AW Persist title change from options editor
