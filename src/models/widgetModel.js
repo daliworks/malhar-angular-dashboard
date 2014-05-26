@@ -29,6 +29,8 @@ angular.module('ui.dashboard')
           dataModelType: Class.dataModelType,
           //AW Need deep copy of options to support widget options editing
           dataModelOptions: Class.dataModelOptions,
+          optionsTemplateUrl: Class.optionsTemplateUrl,
+          options: Class.options,
           style: Class.style
         };
       overrides = overrides || {};

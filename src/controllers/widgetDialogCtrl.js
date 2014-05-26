@@ -26,6 +26,8 @@ angular.module('ui.dashboard')
       title: widget.title
     };
 
+    angular.extend($scope.result, widget.options || {});
+
     // look for optionsTemplateUrl on widget
     $scope.optionsTemplateUrl = optionsTemplateUrl || 'template/widget-default-content.html';
 

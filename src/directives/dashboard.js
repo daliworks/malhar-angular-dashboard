@@ -100,7 +100,7 @@ angular.module('ui.dashboard')
                   return widget;
                 },
                 optionsTemplateUrl: function () {
-                  return scope.options.optionsTemplateUrl;
+                  return widget.optionsTemplateUrl || scope.options.optionsTemplateUrl;
                 }
               },
               controller: 'WidgetDialogCtrl'
@@ -113,7 +113,9 @@ angular.module('ui.dashboard')
             function (result) {
               console.log('widget dialog closed');
               console.log('result: ', result);
-              widget.title = result.title;
+              //widget.title = result.title;
+              widget.options = widget.options || {};
+              angular.extend(widget.options, result);
               //AW Persist title change from options editor
               scope.$emit('widgetChanged', widget);
             },
@@ -206,7 +208,7 @@ angular.module('ui.dashboard')
 
           // Save default widget config for reset
           scope.defaultWidgets = scope.options.defaultWidgets;
-          
+
           //scope.widgetDefs = scope.options.widgetDefinitions;
           scope.widgetDefs = new WidgetDefCollection(scope.options.widgetDefinitions);
 
@@ -266,7 +268,7 @@ angular.module('ui.dashboard')
 
         // save state
         scope.$on('widgetChanged', function (event) {
-          event.stopPropagation();
+          //event.stopPropagation();
           scope.saveDashboard();
         });
       }
