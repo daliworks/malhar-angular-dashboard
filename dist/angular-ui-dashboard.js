@@ -854,6 +854,8 @@ angular.module('ui.dashboard')
 
 angular.module('ui.dashboard')
   .controller('WidgetDialogCtrl', ['$scope', '$modalInstance', 'widget', 'optionsTemplateUrl', function ($scope, $modalInstance, widget, optionsTemplateUrl) {
+    var originalWidget = {}, index;
+
     // add widget to scope
     $scope.widget = widget;
 
@@ -861,6 +863,10 @@ angular.module('ui.dashboard')
     $scope.result = {
       title: widget.title
     };
+
+    for(index in $scope.result) {
+      originalWidget[index] = $scope.result[index];
+    }
 
     angular.extend($scope.result, widget.options || {});
 
@@ -872,6 +878,12 @@ angular.module('ui.dashboard')
     };
 
     $scope.cancel = function () {
+      var index;
+
+      for(index in originalWidget) {
+        widget[index] = originalWidget[index];
+      }
+
       $modalInstance.dismiss('cancel');
     };
   }]);
