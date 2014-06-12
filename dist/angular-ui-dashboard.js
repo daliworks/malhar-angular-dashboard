@@ -634,7 +634,8 @@ angular.module('ui.dashboard')
           dataModelOptions: Class.dataModelOptions,
           optionsTemplateUrl: Class.optionsTemplateUrl,
           options: Class.options,
-          style: Class.style
+          style: Class.style,
+          icon: Class.icon
         };
       overrides = overrides || {};
       angular.extend(this, angular.copy(defaults), overrides);
