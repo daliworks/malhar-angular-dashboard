@@ -29,6 +29,9 @@ angular.module('ui.dashboard')
           stop: function () {
             $scope.saveDashboard();
           },
+          update: function () {
+            $scope.updateDashboard();
+          },
           handle: '.widget-header'
         };
 
@@ -166,6 +169,10 @@ angular.module('ui.dashboard')
               ++scope.options.unsavedChangeCount;
             }
           }
+        };
+
+        scope.updateDashboard = function () {
+          scope.$emit('sortupdate');
         };
 
         /**
