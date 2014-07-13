@@ -121,7 +121,7 @@ describe('Directive: dashboard-layouts', function () {
       '</a>' +
       '</li>' +
       '</ul>' +
-      '<div ng-repeat="layout in layouts | filter:isActive" dashboard="layout.dashboard" templateUrl="template/dashboard.html"></div>'
+      '<div ng-repeat="layout in layouts | filter:isActive" dashboard options="layout.dashboard" templateUrl="template/dashboard.html"></div>'
     );
     var customElement = $compile('<div dashboard-layouts="dashboardOptions" template-url="myCustomTemplate.html"></div>')($rootScope);
     $rootScope.$digest();
