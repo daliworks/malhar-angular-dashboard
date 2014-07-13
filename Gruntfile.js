@@ -23,6 +23,7 @@ module.exports = function (grunt) {
     concat: {
       dist: {
         src: [
+          'src/directives/dashboard.js',
           'src/directives/*.js',
           'src/models/*.js',
           'src/controllers/*.js',
@@ -92,6 +93,7 @@ module.exports = function (grunt) {
         options: {
           open: true,
           base: [
+            '.',
             'demo',
             'dist'
           ]
@@ -101,6 +103,7 @@ module.exports = function (grunt) {
   });
 
   grunt.registerTask('test', [
+    'jshint',
     'ngtemplates',
     'karma'
   ]);
