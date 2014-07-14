@@ -271,8 +271,8 @@ angular.module('ui.dashboard')
             scope.options.saveDashboard = scope.externalSaveDashboard;
             scope.options.getWidgets = scope.getWidgets;
             scope.options.clearWidgets = scope.clear;
-          } else {
-            console.log('dashboardOptions is not ready');
+
+            scope.$emit('dashboardReady');
           }
         });
 
