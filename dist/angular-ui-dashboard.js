@@ -34,7 +34,11 @@ angular.module('ui.dashboard')
           update: function () {
             $scope.updateDashboard();
           },
-          handle: '.widget-header'
+          handle: '.widget-header',
+          cursor: 'move',
+          tolerance: 'pointer',
+          forcePlaceholderSize: true,
+          opacity: 0.5
         };
 
       }],
