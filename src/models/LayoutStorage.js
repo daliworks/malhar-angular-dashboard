@@ -53,6 +53,9 @@ angular.module('ui.dashboard')
       this.widgetButtons = options.widgetButtons;
       this.explicitSave = options.explicitSave;
       this.defaultWidgets = options.defaultWidgets;
+      this.settingsModalOptions = options.settingsModalOptions;
+      this.onSettingsClose = options.onSettingsClose;
+      this.onSettingsDismiss = options.onSettingsDismiss;
       this.options = options;
       this.options.unsavedChangeCount = 0;
 
@@ -65,7 +68,7 @@ angular.module('ui.dashboard')
     LayoutStorage.prototype = {
 
       add: function(layouts) {
-        if ( !(layouts instanceof Array) ) {
+        if (!angular.isArray(layouts)) {
           layouts = [layouts];
         }
         var self = this;
@@ -78,6 +81,9 @@ angular.module('ui.dashboard')
           layout.dashboard.defaultWidgets = layout.defaultWidgets || self.defaultWidgets;
           layout.dashboard.widgetButtons = self.widgetButtons;
           layout.dashboard.explicitSave = self.explicitSave;
+          layout.dashboard.settingsModalOptions = self.settingsModalOptions;
+          layout.dashboard.onSettingsClose = self.onSettingsClose;
+          layout.dashboard.onSettingsDismiss = self.onSettingsDismiss;
           self.layouts.push(layout);
         });
       },
@@ -119,18 +125,13 @@ angular.module('ui.dashboard')
         this.clear();
 
         if (serialized) {
-          
           // check for promise
-          if (typeof serialized === 'object' && typeof serialized.then === 'function') {
+          if (angular.isObject(serialized) && angular.isFunction(serialized.then)) {
             this._handleAsyncLoad(serialized);
-          }
-           else {
+          } else {
             this._handleSyncLoad(serialized);
           }
-
-        }
-
-        else {
+        } else {
           this._addDefaultLayouts();
         }
       },

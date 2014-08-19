@@ -18,7 +18,7 @@
 angular.module('ui.dashboard', ['ui.bootstrap', 'ui.sortable']);
 
 angular.module('ui.dashboard')
-  .directive('dashboard', ['WidgetModel', 'WidgetDefCollection', '$modal', 'DashboardState', function (WidgetModel, WidgetDefCollection, $modal, DashboardState) {
+  .directive('dashboard', ['WidgetModel', 'WidgetDefCollection', '$modal', 'DashboardState', '$log', function (WidgetModel, WidgetDefCollection, $modal, DashboardState, $log) {
     return {
       restrict: 'A',
       templateUrl: function(element, attr) {
@@ -26,27 +26,35 @@ angular.module('ui.dashboard')
       },
       scope: true,
 
-      controller: ['$scope',function ($scope) {
-        $scope.sortableOptions = {
+      controller: ['$scope', function ($scope) {
+        $scope.sortableDefaults = {
           stop: function () {
             $scope.saveDashboard();
           },
           update: function () {
             $scope.updateDashboard();
           },
-          handle: '.widget-header',
-          cursor: 'move',
-          tolerance: 'pointer',
-          forcePlaceholderSize: true,
-          opacity: 0.5
+          handle: '.widget-header'
         };
-
       }],
       link: function (scope, element, attrs) {
         // default options
         var defaults = {
-          stringifyStorage: true
+          stringifyStorage: true,
+          hideWidgetSettings: false,
+          hideWidgetClose: false,
+          settingsModalOptions: {
+            templateUrl: 'template/widget-settings-template.html',
+            controller: 'WidgetSettingsCtrl'
+          },
+          onSettingsClose: function(result, widget) { // NOTE: dashboard scope is also passed as 3rd argument
+            jQuery.extend(true, widget, result);
+          },
+          onSettingsDismiss: function(reason) { // NOTE: dashboard scope is also passed as 2nd argument
+            $log.info('widget settings were dismissed. Reason: ', reason);
+          }
         };
+
         var count = 1;
 
         /**
@@ -97,39 +105,40 @@ angular.module('ui.dashboard')
          * Opens a dialog for setting and changing widget properties
          * @param  {Object} widget The widget instance object
          */
-        scope.openWidgetDialog = function (widget) {
-          var options = widget.editModalOptions;
+        scope.openWidgetSettings = function (widget) {
 
-          // use default options when none are supplied by widget
-          if (!options) {
-            options = {
-              templateUrl: 'template/widget-template.html',
-              resolve: {
-                widget: function () {
-                  return widget;
-                },
-                optionsTemplateUrl: function () {
-                  return widget.optionsTemplateUrl || scope.options.optionsTemplateUrl;
-                }
-              },
-              controller: 'WidgetDialogCtrl'
-            };
-          }
+          // Set up $modal options 
+          var options = _.defaults({}, widget.settingsModalOptions, scope.options.settingsModalOptions);
+
+          // Ensure widget is resolved
+          options.resolve = {
+            widget: function () {
+              return widget;
+            },
+            optionsTemplateUrl: function () {
+              return widget.optionsTemplateUrl || scope.options.optionsTemplateUrl;
+            }
+          };
+          
+          // Create the modal
           var modalInstance = $modal.open(options);
+          var onClose = widget.onSettingsClose || scope.options.onSettingsClose;
+          var onDismiss = widget.onSettingsDismiss || scope.options.onSettingsDismiss;
 
           // Set resolve and reject callbacks for the result promise
           modalInstance.result.then(
             function (result) {
-              console.log('widget dialog closed');
-              console.log('result: ', result);
-              widget.title = result.title;
-              widget.options = widget.options || {};
-              angular.extend(widget.options, result);
+              
+              // Call the close callback
+              onClose(result, widget, scope);
+
               //AW Persist title change from options editor
               scope.$emit('widgetChanged', widget);
             },
             function (reason) {
-              console.log('widget dialog dismissed: ', reason);
+              
+              // Call the dismiss callback
+              onDismiss(reason, scope);
 
             }
           );
@@ -164,7 +173,7 @@ angular.module('ui.dashboard')
           if (!scope.options.explicitSave) {
             scope.dashboardState.save(scope.widgets);
           } else {
-            if (typeof scope.options.unsavedChangeCount !== 'number') {
+            if (!angular.isNumber(scope.options.unsavedChangeCount)) {
               scope.options.unsavedChangeCount = 0;
             }
             if (force) {
@@ -215,9 +224,19 @@ angular.module('ui.dashboard')
           // Extract options the dashboard="" attribute
           scope.options = dashboardOptions;
 
-          // from dashboard="options"
-          angular.extend(defaults, scope.options);
-          angular.extend(scope.options, defaults);
+          // Deep options
+          scope.options.settingsModalOptions = scope.options.settingsModalOptions || {};
+          _.each(['settingsModalOptions'], function(key) {
+            // Ensure it exists on scope.options
+            scope.options[key] = scope.options[key] || {};
+            // Set defaults
+            _.defaults(scope.options[key], defaults[key]);
+          });
+
+          // Shallow options
+          _.defaults(scope.options, defaults);
+
+          scope.sortableOptions = angular.extend({}, scope.sortableDefaults, scope.options.sortableOptions || {});
 
           // Save default widget config for reset
           scope.defaultWidgets = scope.options.defaultWidgets;
@@ -258,13 +277,11 @@ angular.module('ui.dashboard')
             // Set default widgets array
             var savedWidgetDefs = scope.dashboardState.load();
 
-            if (savedWidgetDefs instanceof Array) {
+            if (angular.isArray(savedWidgetDefs)) {
               handleStateLoad(savedWidgetDefs);
-            }
-            else if (savedWidgetDefs && typeof savedWidgetDefs === 'object' && typeof savedWidgetDefs.then === 'function') {
+            } else if (savedWidgetDefs && angular.isObject(savedWidgetDefs) && angular.isFunction(savedWidgetDefs.then)) {
               savedWidgetDefs.then(handleStateLoad, handleStateLoad);
-            }
-            else {
+            } else {
               handleStateLoad();
             }
 
@@ -441,7 +458,7 @@ angular.module('ui.dashboard')
 'use strict';
 
 angular.module('ui.dashboard')
-  .directive('widget', function () {
+  .directive('widget', function ($injector) {
 
     return {
 
@@ -450,9 +467,28 @@ angular.module('ui.dashboard')
       link: function (scope) {
 
         var widget = scope.widget;
+        var dataModelType = widget.dataModelType;
+
         // set up data source
-        if (widget.dataModelType) {
-          var ds = new widget.dataModelType();
+        if (dataModelType) {
+          var DataModelConstructor; // data model constructor function
+
+          if (angular.isFunction(dataModelType)) {
+            DataModelConstructor = dataModelType;
+          } else if (angular.isString(dataModelType)) {
+            $injector.invoke([dataModelType, function (DataModelType) {
+              DataModelConstructor = DataModelType;
+            }]);
+          } else {
+            throw new Error('widget dataModelType should be function or string');
+          }
+
+          var ds;
+          if (widget.dataModelArgs) {
+            ds = new DataModelConstructor(widget.dataModelArgs);
+          } else {
+            ds = new DataModelConstructor();
+          }
           widget.dataModel = ds;
           ds.setup(widget, scope);
           ds.init();
@@ -522,6 +558,9 @@ angular.module('ui.dashboard')
       this.widgetButtons = options.widgetButtons;
       this.explicitSave = options.explicitSave;
       this.defaultWidgets = options.defaultWidgets;
+      this.settingsModalOptions = options.settingsModalOptions;
+      this.onSettingsClose = options.onSettingsClose;
+      this.onSettingsDismiss = options.onSettingsDismiss;
       this.options = options;
       this.options.unsavedChangeCount = 0;
 
@@ -534,7 +573,7 @@ angular.module('ui.dashboard')
     LayoutStorage.prototype = {
 
       add: function(layouts) {
-        if ( !(layouts instanceof Array) ) {
+        if (!angular.isArray(layouts)) {
           layouts = [layouts];
         }
         var self = this;
@@ -547,6 +586,9 @@ angular.module('ui.dashboard')
           layout.dashboard.defaultWidgets = layout.defaultWidgets || self.defaultWidgets;
           layout.dashboard.widgetButtons = self.widgetButtons;
           layout.dashboard.explicitSave = self.explicitSave;
+          layout.dashboard.settingsModalOptions = self.settingsModalOptions;
+          layout.dashboard.onSettingsClose = self.onSettingsClose;
+          layout.dashboard.onSettingsDismiss = self.onSettingsDismiss;
           self.layouts.push(layout);
         });
       },
@@ -588,18 +630,13 @@ angular.module('ui.dashboard')
         this.clear();
 
         if (serialized) {
-          
           // check for promise
-          if (typeof serialized === 'object' && typeof serialized.then === 'function') {
+          if (angular.isObject(serialized) && angular.isFunction(serialized.then)) {
             this._handleAsyncLoad(serialized);
-          }
-           else {
+          } else {
             this._handleSyncLoad(serialized);
           }
-
-        }
-
-        else {
+        } else {
           this._addDefaultLayouts();
         }
       },
@@ -800,7 +837,7 @@ angular.module('ui.dashboard')
 
         if (serialized) {
           // check for promise
-          if (typeof serialized === 'object' && typeof serialized.then === 'function') {
+          if (angular.isObject(serialized) && angular.isFunction(serialized.then)) {
             return this._handleAsyncLoad(serialized);
           }
           // otherwise handle synchronous load
@@ -1018,16 +1055,19 @@ angular.module('ui.dashboard')
           attrs: Class.attrs,
           dataAttrName: Class.dataAttrName,
           dataModelType: Class.dataModelType,
+          dataModelArgs: Class.dataModelArgs, // used in data model constructor, not serialized
           //AW Need deep copy of options to support widget options editing
           dataModelOptions: Class.dataModelOptions,
+          settingsModalOptions: Class.settingsModalOptions,
+          onSettingsClose: Class.onSettingsClose,
+          onSettingsDismiss: Class.onSettingsDismiss,
+          style: Class.style,
           optionsTemplateUrl: Class.optionsTemplateUrl,
           options: Class.options,
-          style: Class.style,
           icon: Class.icon
         };
       overrides = overrides || {};
       angular.extend(this, angular.copy(defaults), overrides);
-      this.style = this.style;
 
       if (this.style && this.style.width) {
         this.setWidth(this.style.width);
@@ -1066,7 +1106,6 @@ angular.module('ui.dashboard')
 
     return WidgetModel;
   });
-
 /*
  * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
  *
@@ -1282,41 +1321,21 @@ angular.module('ui.dashboard')
 'use strict';
 
 angular.module('ui.dashboard')
-  .controller('WidgetDialogCtrl', ['$scope', '$modalInstance', 'widget', 'optionsTemplateUrl', function ($scope, $modalInstance, widget, optionsTemplateUrl) {
-    var originalWidget = {}, index;
+    .controller('WidgetSettingsCtrl', ['$scope', '$modalInstance', 'widget', function ($scope, $modalInstance, widget) {
+      // add widget to scope
+      $scope.widget = widget;
 
-    // add widget to scope
-    $scope.widget = widget;
+      // set up result object
+      $scope.result = jQuery.extend(true, {}, widget);
 
-    // set up result object
-    $scope.result = {
-      title: widget.title
-    };
+      $scope.ok = function () {
+        $modalInstance.close($scope.result);
+      };
 
-    for(index in $scope.result) {
-      originalWidget[index] = $scope.result[index];
-    }
-
-    angular.extend($scope.result, widget.options || {});
-
-    // look for optionsTemplateUrl on widget
-    $scope.optionsTemplateUrl = optionsTemplateUrl || 'template/widget-default-content.html';
-
-    $scope.ok = function () {
-      $modalInstance.close($scope.result);
-    };
-
-    $scope.cancel = function () {
-      var index;
-
-      for(index in originalWidget) {
-        widget[index] = originalWidget[index];
-      }
-
-      $modalInstance.dismiss('cancel');
-    };
-  }]);
-
+      $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+      };
+    }]);
 angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
 
   $templateCache.put("template/alt-dashboard.html",
@@ -1357,7 +1376,7 @@ angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
     "                        </form>\n" +
     "                        <span class=\"label label-primary\" ng-if=\"!options.hideWidgetName\">{{widget.name}}</span>\n" +
     "                        <span ng-click=\"removeWidget(widget);\" class=\"glyphicon glyphicon-remove\" ng-if=\"!options.hideWidgetClose\"></span>\n" +
-    "                        <span ng-click=\"openWidgetDialog(widget);\" class=\"glyphicon glyphicon-cog\" ng-if=\"!options.hideWidgetOptions\"></span>\n" +
+    "                        <span ng-click=\"openWidgetSettings(widget);\" class=\"glyphicon glyphicon-cog\" ng-if=\"!options.hideWidgetSettings\"></span>\n" +
     "                    </h3>\n" +
     "                </div>\n" +
     "                <div class=\"panel-body widget-content\"></div>\n" +
@@ -1387,7 +1406,7 @@ angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
     "        </a>\n" +
     "    </li>\n" +
     "</ul>\n" +
-    "<div ng-repeat=\"layout in layouts | filter:isActive\" dashboard options=\"layout.dashboard\" templateUrl=\"template/dashboard.html\"></div>"
+    "<div ng-repeat=\"layout in layouts | filter:isActive\" dashboard options=\"layout.dashboard\" template-url=\"template/dashboard.html\"></div>\n"
   );
 
   $templateCache.put("template/dashboard.html",
@@ -1428,7 +1447,7 @@ angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
     "                        </form>\n" +
     "                        <span class=\"label label-primary\" ng-if=\"!options.hideWidgetName\">{{widget.name}}</span>\n" +
     "                        <span ng-click=\"removeWidget(widget);\" class=\"glyphicon glyphicon-remove\" ng-if=\"!options.hideWidgetClose\"></span>\n" +
-    "                        <span ng-click=\"openWidgetDialog(widget);\" class=\"glyphicon glyphicon-cog\" ng-if=\"!options.hideWidgetOptions\"></span>\n" +
+    "                        <span ng-click=\"openWidgetSettings(widget);\" class=\"glyphicon glyphicon-cog\" ng-if=\"!options.hideWidgetSettings\"></span>\n" +
     "                    </h3>\n" +
     "                </div>\n" +
     "                <div class=\"panel-body widget-content\"></div>\n" +
@@ -1459,7 +1478,7 @@ angular.module("ui.dashboard").run(["$templateCache", function($templateCache) {
     ""
   );
 
-  $templateCache.put("template/widget-template.html",
+  $templateCache.put("template/widget-settings-template.html",
     "<div class=\"modal-header\">\n" +
     "    <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\" ng-click=\"cancel()\">&times;</button>\n" +
     "  <h3>Widget Options <small>{{widget.title}}</small></h3>\n" +
