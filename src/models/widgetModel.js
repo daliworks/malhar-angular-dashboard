@@ -17,7 +17,7 @@
 'use strict';
 
 angular.module('ui.dashboard')
-  .factory('WidgetModel', function () {
+  .factory('WidgetModel', function ($log) {
     // constructor for widget model instances
     function WidgetModel(Class, overrides) {
       var defaults = {
@@ -33,17 +33,18 @@ angular.module('ui.dashboard')
           settingsModalOptions: Class.settingsModalOptions,
           onSettingsClose: Class.onSettingsClose,
           onSettingsDismiss: Class.onSettingsDismiss,
-          style: Class.style,
+          style: Class.style || {},
+          size: Class.size || {},
+          enableVerticalResize: (Class.enableVerticalResize === false) ? false : true,
           optionsTemplateUrl: Class.optionsTemplateUrl,
           options: Class.options,
           icon: Class.icon
         };
       overrides = overrides || {};
       angular.extend(this, angular.copy(defaults), overrides);
-
-      if (this.style && this.style.width) {
-        this.setWidth(this.style.width);
-      }
+      this.containerStyle = { width: '33%' }; // default width
+      this.contentStyle = {};
+      this.updateContainerStyle(this.style);
 
       if (Class.templateUrl) {
         this.templateUrl = Class.templateUrl;
@@ -53,6 +54,18 @@ angular.module('ui.dashboard')
         var directive = Class.directive || Class.name;
         this.directive = directive;
       }
+
+      if (this.size && _.has(this.size, 'height')) {
+        this.setHeight(this.size.height);
+      }
+
+      if (this.style && _.has(this.style, 'width')) { //TODO deprecate style attribute
+        this.setWidth(this.style.width);
+      }
+
+      if (this.size && _.has(this.size, 'width')) {
+        this.setWidth(this.size.width);
+      }
     }
 
     WidgetModel.prototype = {
@@ -60,10 +73,12 @@ angular.module('ui.dashboard')
       setWidth: function (width, units) {
         width = width.toString();
         units = units || width.replace(/^[-\.\d]+/, '') || '%';
+
         this.widthUnits = units;
         width = parseFloat(width);
 
-        if (width < 0) {
+        if (width < 0 || isNaN(width)) {
+          $log.warn('malhar-angular-dashboard: setWidth was called when width was ' + width);
           return false;
         }
 
@@ -71,8 +86,30 @@ angular.module('ui.dashboard')
           width = Math.min(100, width);
           width = Math.max(0, width);
         }
-        this.style.width = width + '' + units;
+
+        this.containerStyle.width = width + '' + units;
+
+        this.updateSize(this.containerStyle);
+
         return true;
+      },
+
+      setHeight: function (height) {
+        this.contentStyle.height = height;
+        this.updateSize(this.contentStyle);
+      },
+
+      setStyle: function (style) {
+        this.style = style;
+        this.updateContainerStyle(style);
+      },
+
+      updateSize: function (size) {
+        angular.extend(this.size, size);
+      },
+
+      updateContainerStyle: function (style) {
+        angular.extend(this.containerStyle, style);
       }
     };
 

@@ -89,6 +89,8 @@ angular.module('ui.dashboard')
           if (!doNotSave) {
             scope.saveDashboard();
           }
+
+          return widget;
         };
 
         /**
@@ -108,7 +110,10 @@ angular.module('ui.dashboard')
         scope.openWidgetSettings = function (widget) {
 
           // Set up $modal options 
-          var options = _.defaults({}, widget.settingsModalOptions, scope.options.settingsModalOptions);
+          var options = _.defaults(
+            { scope: scope },
+            widget.settingsModalOptions,
+            scope.options.settingsModalOptions);
 
           // Ensure widget is resolved
           options.resolve = {
@@ -290,6 +295,8 @@ angular.module('ui.dashboard')
             scope.options.addWidget = scope.addWidget;
             scope.options.loadWidgets = scope.loadWidgets;
             scope.options.saveDashboard = scope.externalSaveDashboard;
+            scope.options.removeWidget = scope.removeWidget;
+            scope.options.openWidgetSettings = scope.openWidgetSettings;
             scope.options.getWidgets = scope.getWidgets;
             scope.options.clearWidgets = scope.clear;
 

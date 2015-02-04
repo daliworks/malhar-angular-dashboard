@@ -1,9 +1,10 @@
 angular-dashboard
 ====================
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/DataTorrent/malhar-angular-dashboard?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![Build Status](https://travis-ci.org/DataTorrent/malhar-angular-dashboard.svg?branch=master)](https://travis-ci.org/DataTorrent/malhar-angular-dashboard)
 
-Dashboard/Widgets functionality with AngularJS (directive).
+Generic AngularJS component/directive providing dashboard/widgets functionality.
 
 
 Features:
@@ -14,10 +15,12 @@ Features:
  - Widgets are instantiated dynamically (from corresponding directive or template)
 
  - Widgets drag and drop (with jQuery UI Sortable)
+ 
+ - Horizontal and vertical widgets resize
 
  - Fluid layout (widgets can have percentage-based width, or have width set in any other unit)
 
- - Any directive can be a widget (e.g. AngularUI directives)
+ - Any directive or template can be a widget
 
  - Connecting widgets to real-time data (WebSocket, REST, etc.)
 
@@ -44,6 +47,10 @@ Examples
 
 [Advanced demo](http://datatorrent.github.io/malhar-dashboard-webapp/#/) (charts, visualization, data sources, etc.) [[source code](https://github.com/DataTorrent/malhar-dashboard-webapp)]
 
+UI Console (very complex application; REST, WebSocket and Socket.IO data sources; dashboard customization; etc.) [[source code](https://github.com/DataTorrent/malhar-ui-console)]
+
+Widget Library using the dashboard [[source code](https://github.com/DataTorrent/malhar-angular-widgets)]
+
 ![AngularJS Dashboard](docs/AngularJSDashboard.png "AngularJS Dashboard")
 
 Build
@@ -64,6 +71,7 @@ Requirements
 - jQuery
 - jQuery UI
 - Angular UI Sortable
+- Angular Bootstrap
 
 Example of including dependencies from CDN [here](demo/index.html)
 
@@ -99,8 +107,8 @@ Download the zip of this repo and use the files in the `dist` folder.
 Load `dist/angular-ui-dashboard.js` and `dist/angular-ui-dashboard.css` in your html:
 
 ```HTML
-<link rel="stylesheet" href="bower_components/angular-ui-dashboard/dist/angular-ui-dashboard.css">
-<script src="bower_components/angular-ui-dashboard/dist/angular-ui-dashboard.js"></script>
+<link rel="stylesheet" href="bower_components/malhar-angular-dashboard/dist/angular-ui-dashboard.css">
+<script src="bower_components/malhar-angular-dashboard/dist/angular-ui-dashboard.js"></script>
 ```
 
 Also be sure to add it to your apps dependency list:
@@ -180,9 +188,32 @@ You can think of Widget Definition Objects as a __class__ and the widgets on the
 | dataAttrName      | String   | n/a           | false    | Name of attribute to bind `widgetData` model
 | storageHash       | String   | n/a           | false    | This is analogous to the `storageHash` option on the dashboard, except at a widget-level instead of a dashboard-wide | level. This can be helpful if you would only like to invalidate stored state of one widget at a time instead of all widgets.
 | settingsModalOptions | Object | see below | no | Overrides same-named option in dashboard options for this widget. See the **Custom Widget Settings** section below. |
+| size              | Object   | n/a           | false    | Widget size, e.g { width: '50%', height: '250px' } |
+| style             | Object   | n/a           | false    | Widget style, e.g { float: 'right' } |
+| enableVerticalResize | Boolean  | true       | false    | Option to enable/disable vertical resize. Should be provided in "widgetDefinitions" since it is not serialized by default. |
 | onSettingsClose      | Function | see below | no | Overrides same-named option in dashboard options for this widget. See the **Custom Widget Settings** section below. |
 | onSettingsDismiss    | Function | see below | no | Overrides same-named option in dashboard options for this widget. See the **Custom Widget Settings** section below. |
 
+
+### Widget Resize
+
+Widgets width and height is controlled with `size` attribute (serialized by default). Width can be both unit and percentage based.
+
+Example
+```JavaScript
+      {
+        name: 'fluid',
+        directive: 'wt-fluid',
+        size: {
+          width: '50%',
+          height: '250px'
+        }
+      }
+```
+
+Widgets can be resized both horizontally and vertically and size is serialized.
+
+When widget is resized 'widgetResized' event is broadcasted to the widget scope.
 
 ### dataModelType
 
@@ -227,7 +258,7 @@ Persistence
 This dashboard component offers a means to save the state of the user's dashboard. Specifically, the dashboard can automatically save:
 
 - instantiated widgets
-- width of widgets
+- size of widgets (width and height)
 - order that widgets are displayed
 - widget titles
 - any serializable data stored in `dataModelOptions` if the widget instance has a `ds` (instantiated `dataModelType`)
@@ -345,13 +376,16 @@ The `layoutOptions` object passed to dashboard-layouts tries to mirror `dashboar
 key | type | default value | required | description
 --- | ---- | ------------- | -------- | -----------
  widgetDefinitions | Array | n/a | yes | Same as in `dashboardOptions`
- defaultLayouts    | Array | n/a | yes | List of objects where an object is `{ title: [STRING_LAYOUT_TITLE], active: [BOOLEAN_ACTIVE_STATE], defaultWidgets: [ARRAY_DEFAULT_WIDGETS] }`. Note that `defaultWidgets` is the same as in `dashboardOptions`.
+ lockDefaultLayouts | Boolean| false | no | `true` to lock default layouts (prevent from removing and renaming), layout lock can also be controlled with `locked` layout property
+ defaultLayouts    | Array | n/a | yes | List of objects where an object is `{ title: [STRING_LAYOUT_TITLE], active: [BOOLEAN_ACTIVE_STATE], locked: [BOOLEAN], defaultWidgets: [ARRAY_DEFAULT_WIDGETS] }`. Note that `defaultWidgets` is the same as in `dashboardOptions`.
  widgetButtons     | Boolean | true | no | Same as in `dashboardOptions`
  storage   | Object | null | no | Same as in `dashboardOptions`, only the saved objects look like: `{ layouts: [...], states: {...}, storageHash: '' }`
  storageId | String | null | no (yes if `storage` is defined) | This is used as the first parameter passed to the three `storage` methods `setItem`, `getItem`, `removeItem`. See the **Persistence** section above.
  storageHash | String | '' | no | Same as in `dashboardOptions`
  stringifyStorage | Boolean | true | no | Same as in `dashboardOptions`
  explicitSave | Boolean | false | no | Same as in `dashboardOptions`
+ sortableOptions | Object | n/a | no | Same as in 'dashboardOptions'
+
 
 As with `dashboardOptions`, `layoutOptions` gets endowed with the methods `addWidget`, `loadWidgets`, `saveDashboard` and `loadDashboard`. These will be applied to the currently active dashboard layout. Additionally, a method called `saveLayouts` is attached to the `layoutOptions` object. This method will save the state of the layouts explicitly.
 
@@ -372,4 +406,6 @@ Links
 
 [Bower](http://bower.io/) Package manager for the web
 
-[Grunt](http://gruntjs.com/) JavaScript Task Runner
+[Grunt](http://gruntjs.com/) JavaScript task runner
+
+[Gulp](http://gulpjs.com/) Streaming build system
