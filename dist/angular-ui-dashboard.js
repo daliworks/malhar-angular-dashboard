@@ -1070,7 +1070,7 @@ angular.module('ui.dashboard')
 'use strict';
 
 angular.module('ui.dashboard')
-  .factory('WidgetModel', function ($log) {
+  .factory('WidgetModel', ['$log', function ($log) {
     // constructor for widget model instances
     function WidgetModel(Class, overrides) {
       var defaults = {
@@ -1167,7 +1167,7 @@ angular.module('ui.dashboard')
     };
 
     return WidgetModel;
-  });
+  }]);
 /*
  * Copyright (c) 2014 DataTorrent, Inc. ALL Rights Reserved.
  *
