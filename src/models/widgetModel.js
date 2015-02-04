@@ -71,6 +71,12 @@ angular.module('ui.dashboard')
     WidgetModel.prototype = {
       // sets the width (and widthUnits)
       setWidth: function (width, units) {
+        if (width === 'none') {
+          this.containerStyle.width = width;
+          this.updateSize(this.containerStyle);
+          return true;
+        }
+
         width = width.toString();
         units = units || width.replace(/^[-\.\d]+/, '') || '%';
 
