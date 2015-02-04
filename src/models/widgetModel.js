@@ -17,7 +17,7 @@
 'use strict';
 
 angular.module('ui.dashboard')
-  .factory('WidgetModel', function ($log) {
+  .factory('WidgetModel', ['$log', function ($log) {
     // constructor for widget model instances
     function WidgetModel(Class, overrides) {
       var defaults = {
@@ -114,4 +114,4 @@ angular.module('ui.dashboard')
     };
 
     return WidgetModel;
-  });
+  }]);
