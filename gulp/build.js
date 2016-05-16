@@ -32,6 +32,9 @@ gulp.task('build:js', ['partials'], function() {
     .pipe($.concat('malhar-angular-dashboard.js'))
     .pipe($.ngAnnotate())
     .pipe(gulp.dest(paths.dist))
+    .pipe($.rename('malhar-angular-dashboard.min.js'))
+    .pipe($.uglify())
+    .pipe(gulp.dest(paths.dist));
 
 });
 
